@@ -1,0 +1,240 @@
+<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Manoir Valcourt</title>
+<link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=Cinzel:wght@600;900&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#0c0a08;--bone:#d9d0ba;--blood:#a3201a;--brass:#b3924d;color-scheme:dark}
+*{box-sizing:border-box}html,body{height:100%;margin:0;background:var(--ink);color:var(--bone);font-family:'Special Elite','Courier New',monospace;overflow:hidden}
+canvas{display:block;position:fixed;inset:0}
+.scr{position:fixed;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center;padding:calc(20px + env(safe-area-inset-top,0px)) 20px calc(20px + env(safe-area-inset-bottom,0px));background:radial-gradient(ellipse at center,rgba(12,10,8,.5),rgba(12,10,8,.95));z-index:5}
+.scr.on{display:flex}
+h1,h2{font-family:Cinzel,Georgia,serif;margin:0;color:var(--blood);text-shadow:0 0 28px #5a0d0a;letter-spacing:.04em}
+h1{font-weight:900;font-size:clamp(42px,10vw,96px);line-height:.95;animation:fl 6s infinite}
+h2{font-weight:900;font-size:clamp(32px,7vw,60px)}
+@keyframes fl{0%,90%,94%,100%{opacity:1}92%{opacity:.35}96%{opacity:.6}}
+@media(prefers-reduced-motion:reduce){h1{animation:none}}
+p{max-width:560px;line-height:1.6;margin:4px 0;font-size:clamp(14px,2.4vw,17px)}
+.sub{color:var(--brass);font-size:clamp(14px,2.6vw,19px);margin-bottom:22px}
+button{font:inherit;font-size:18px;color:var(--bone);background:rgba(12,10,8,.7);border:1px solid var(--brass);padding:11px 34px;min-width:270px;cursor:pointer}
+button:hover,button:focus-visible{background:var(--blood);border-color:var(--blood);outline:none}
+.keys{display:grid;grid-template-columns:auto auto;gap:4px 18px;text-align:left;margin:8px 0 14px;font-size:15px}.keys b{color:var(--brass);font-weight:400}
+#hud{position:fixed;inset:0;pointer-events:none;display:none;z-index:2}#hud.on{display:block}
+#obj{position:absolute;top:calc(14px + env(safe-area-inset-top,0px));left:16px;max-width:60vw;font-size:15px;color:var(--bone);text-shadow:0 1px 3px #000}
+#obj i{display:block;font-style:normal;color:var(--brass);font-size:13px}
+#msg{position:absolute;bottom:26%;width:100%;text-align:center;font-size:19px;text-shadow:0 2px 4px #000;color:#f0e6c8;min-height:24px}
+#cross{position:absolute;left:50%;top:50%;width:8px;height:8px;margin:-4px;border:1px solid rgba(217,208,186,.8);border-radius:50%}
+#hp{position:absolute;left:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));width:min(240px,42vw);padding:10px 12px;background:rgba(12,10,8,.72);border:1px solid #4a3d2a}
+#hpst{font-family:Cinzel,serif;font-weight:900;font-size:22px;margin-bottom:6px}
+.bar{height:8px;background:#2a2218}.bar i{display:block;height:100%;width:100%}
+#inv{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));display:flex;gap:8px;flex-wrap:wrap;justify-content:center;max-width:36vw}
+#inv span{background:rgba(12,10,8,.72);border:1px solid var(--brass);padding:6px 9px;font-size:13px}
+#ammo{position:absolute;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));padding:10px 14px;background:rgba(12,10,8,.72);border:1px solid #4a3d2a;text-align:right;font-size:15px}
+#ammo b{font-family:Cinzel,serif;font-size:34px;font-weight:900}#ammo small{display:block;color:var(--brass)}
+#vig{position:absolute;inset:0;box-shadow:inset 0 0 160px 40px #a3201a;opacity:0}
+#hit{position:absolute;left:50%;top:50%;width:22px;height:22px;margin:-11px;border:2px solid var(--blood);transform:rotate(45deg);opacity:0}
+@media(max-width:700px){#inv{position:absolute;bottom:calc(86px + env(safe-area-inset-bottom,0px));max-width:90vw}}
+#grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;width:min(660px,92vw)}.slot{min-width:0;padding:14px 8px;text-align:center;font-size:16px}.slot small{display:block;color:var(--brass);font-size:12px;margin-top:5px}.slot.on{border-color:var(--blood);background:rgba(163,32,26,.35)}
+#wb{position:absolute;right:16px;bottom:calc(98px + env(safe-area-inset-bottom,0px));display:flex;gap:6px}#wb span{background:rgba(12,10,8,.72);border:1px solid #4a3d2a;padding:5px 9px;font-size:13px;color:#8a8070}#wb span.on{border-color:var(--brass);color:var(--bone)}
+</style></head><body>
+<div id="hud"><div id="obj"></div><div id="msg"></div><div id="cross"></div><div id="hit"></div><div id="hp"><div id="hpst">Bon état</div><div class="bar"><i id="hpb"></i></div></div><div id="inv"></div><div id="ammo"></div><div id="vig"></div></div>
+
+<div class="scr on" id="menu"><h1>Manoir<br>Valcourt</h1><div class="sub">Une nuit. Deux clés. Un hélicoptère.</div>
+<button onclick="go('brief')">Nouvelle partie</button><button id="dif" onclick="toggleDif()">Difficulté : Normal</button><button onclick="go('help')">Instructions</button></div>
+
+<div class="scr" id="brief"><h2>Dossier confidentiel</h2>
+<p>Votre équipe a disparu dans le manoir Valcourt. Vous êtes la seule survivante. Un hélicoptère vous attend sur le toit, côté nord-est, mais la porte d’accès est verrouillée. Trouvez la clé de bronze, puis la clé du cygne. Ne gaspillez pas vos balles.</p>
+<div class="keys"><b>Z Q S D / flèches</b><span>Se déplacer, tourner</span><b>Souris</b><span>Viser</span><b>Clic / Espace</b><span>Tirer</span><b>R</b><span>Recharger</span><b>E</b><span>Ouvrir une porte</span><b>H</b><span>Utiliser une herbe verte</span><b>Échap</b><span>Pause</span></div>
+<button onclick="start()">Entrer dans le manoir</button><button onclick="go('menu')">Retour</button></div>
+
+<div class="scr" id="help"><h2>Instructions</h2>
+<p>Explorez les pièces, ramassez munitions et herbes vertes, puis ouvrez les portes verrouillées avec les bonnes clés. Les zombies vous repèrent à la vue : visez la tête pour des dégâts doubles.</p>
+<div class="keys"><b>Z Q S D / flèches</b><span>Se déplacer, tourner</span><b>Souris</b><span>Viser</span><b>Clic / Espace</b><span>Tirer</span><b>R</b><span>Recharger</span><b>E</b><span>Interagir</span><b>H</b><span>Soigner</span><b>Échap</b><span>Pause</span></div>
+<button onclick="go('menu')">Retour</button></div>
+
+<div class="scr" id="invs"><h2>Inventaire</h2><div id="grid"></div><p id="note"></p><button onclick="closeInv()">Fermer</button></div>
+<div class="scr" id="pause"><h2>Pause</h2><button onclick="resume()">Reprendre</button><button onclick="start()">Recommencer</button><button onclick="toMenu()">Menu principal</button></div>
+<div class="scr" id="over"><h2>Vous êtes morte</h2><p>Le manoir garde ses secrets.</p><button onclick="start()">Réessayer</button><button onclick="toMenu()">Menu principal</button></div>
+<div class="scr" id="win"><h2 style="color:#b3924d">Évasion réussie</h2><p id="wt"></p><button onclick="start()">Rejouer</button><button onclick="toMenu()">Menu principal</button></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+const MAP0=["#################","#.....#.....#...#","#.....#.....#...#","#.....D.....X...#","#.....#.....#...#","###.###.#########","#...............#","#...............#","#...............#","##.#####.########","#...#.......#...#","#...D.......L...#","#...#.......#...#","#################"];
+const ZS=[[2,2],[2,9],[7,12],[11,8],[11,14],[7,2]];
+const IT=[['k1',1,9],['k2',12,14],['h',1,1],['h',12,2],['h',8,14],['a',8,2],['a',12,8],['a',1,5],['a',7,10]];
+const LT=[[2,3],[2,9],[2,14],[7,8],[11,2],[11,8],[11,14]];
+let nm=false,state='menu',M,W,zs,items,doors,fl,hp,ammo,res,herbs,keys,reloading,px,pz,yaw,pitch,t0,bobT=0,kick=0,vig=0,hitT=0,locked=false,msgT=0,lastHud='';
+const K={};
+const renderer=new THREE.WebGLRenderer({antialias:true});renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,2));document.body.prepend(renderer.domElement);
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x050404);scene.fog=new THREE.FogExp2(0x050404,.075);
+const cam=new THREE.PerspectiveCamera(72,innerWidth/innerHeight,.05,60);scene.add(cam);
+addEventListener('resize',()=>{renderer.setSize(innerWidth,innerHeight);cam.aspect=innerWidth/innerHeight;cam.updateProjectionMatrix()});
+scene.add(new THREE.AmbientLight(0x3a3040,.7));
+const spot=new THREE.SpotLight(0xfff0d0,1.6,24,.55,.6,1.2);cam.add(spot);cam.add(spot.target);spot.target.position.set(0,0,-1);
+const flash=new THREE.PointLight(0xffc060,0,8);cam.add(flash);
+const gun=new THREE.Group(),gm=new THREE.MeshStandardMaterial({color:0x2a2a2e,metalness:.6,roughness:.5});
+[[.08,.1,.4,0,0,0],[.07,.16,.09,0,-.12,.12]].forEach(a=>{const b=new THREE.Mesh(new THREE.BoxGeometry(a[0],a[1],a[2]),gm);b.position.set(a[3],a[4],a[5]);gun.add(b)});
+gun.position.set(.26,-.24,-.55);cam.add(gun);
+function tex(draw,rx,ry){const c=document.createElement('canvas');c.width=c.height=128;draw(c.getContext('2d'));const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(rx,ry);return t}
+const wallT=tex(g=>{g.fillStyle='#3a2a22';g.fillRect(0,0,128,128);for(let i=0;i<128;i+=16){g.fillStyle=i%32?'#44322a':'#2f221c';g.fillRect(i,0,16,128)}g.fillStyle='#1c130f';g.fillRect(0,84,128,44);g.fillStyle='#5a4228';g.fillRect(0,82,128,4);for(let i=0;i<300;i++){g.fillStyle='rgba(0,0,0,.14)';g.fillRect(Math.random()*128,Math.random()*128,2,2)}},1,1);
+const floorT=tex(g=>{g.fillStyle='#1a1512';g.fillRect(0,0,128,128);g.fillStyle='#8a8272';g.fillRect(0,0,64,64);g.fillRect(64,64,64,64)},17,14);
+const wallM=new THREE.MeshStandardMaterial({map:wallT,roughness:.9});
+const solid=(x,z)=>{const ch=(M[Math.round(z/2)]||[])[Math.round(x/2)];return ch===undefined||ch==='#'||ch==='D'||ch==='L'||ch==='X'};
+const canGo=(x,z,r)=>![[r,r],[-r,r],[r,-r],[-r,-r]].some(a=>solid(x+a[0],z+a[1]));
+const rayWall=(x,z,dx,dz,mx)=>{for(let d=0;d<mx;d+=.2)if(solid(x+dx*d,z+dz*d))return d;return mx};
+const box=(w,h,d,col,x,y,z,em)=>{const b=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshStandardMaterial({color:col,emissive:em||0,roughness:1}));b.position.set(x,y,z);return b};
+function mkZ(r,c){const g=new THREE.Group(),a=(...p)=>{const b=box(...p);g.add(b);return b};
+a(.6,.8,.3,0x4a5238,0,1.1,0);a(.2,.7,.22,0x2d3040,-.15,.35,0);a(.2,.7,.22,0x2d3040,.15,.35,0);a(.3,.3,.02,0x5a0f0c,0,1.1,-.16);
+const l=a(.16,.7,.16,0x7d8c6c,-.4,1.25,-.3),r2=a(.16,.7,.16,0x7d8c6c,.4,1.25,-.3);l.rotation.x=r2.rotation.x=-1.4;
+const h=new THREE.Mesh(new THREE.SphereGeometry(.22,10,8),new THREE.MeshStandardMaterial({color:0x8c9a78,roughness:1}));h.position.y=1.72;g.add(h);
+a(.05,.05,.03,0,-.08,1.75,-.2,0xff0000);a(.05,.05,.03,0,.08,1.75,-.2,0xff0000);
+g.position.set(c*2,0,r*2);const z={g,head:h,x:c*2,z:r*2,hp:4,cd:0,stun:0,aggro:0,dead:false,ph:Math.random()*6,fall:0};
+g.children.forEach(m=>m.userData.z=z);scene.add(g);return z}
+function build(){if(W)scene.remove(W);zs&&zs.forEach(z=>scene.remove(z.g));W=new THREE.Group();scene.add(W);
+M=MAP0.map(r=>r.split(''));zs=[];items=[];doors={};fl=[];
+const fm=new THREE.Mesh(new THREE.PlaneGeometry(34,28),new THREE.MeshStandardMaterial({map:floorT,roughness:.6}));fm.rotation.x=-Math.PI/2;fm.position.set(16,0,13);W.add(fm);
+const cm=new THREE.Mesh(new THREE.PlaneGeometry(34,28),new THREE.MeshStandardMaterial({color:0x1a1411}));cm.rotation.x=Math.PI/2;cm.position.set(16,3,13);W.add(cm);
+M.forEach((row,r)=>row.forEach((ch,c)=>{if(ch==='#'){const b=new THREE.Mesh(new THREE.BoxGeometry(2,3,2),wallM);b.position.set(c*2,1.5,r*2);W.add(b)}
+else if('DLX'.includes(ch)){const d=box(.3,3,2,ch==='D'?0x5b3a1e:ch==='L'?0x7a5a2a:0x6a1c18,c*2,1.5,r*2);d.add(box(.1,.12,.12,0xb3924d,.2,-.1,.6,0x332200));W.add(d);doors[r+','+c]=d}}));
+LT.forEach(p=>{const l=new THREE.PointLight(0xffa860,.7,10);l.position.set(p[1]*2,2.5,p[0]*2);l.userData.b=.5+Math.random()*.3;W.add(l);fl.push(l)});
+IT.forEach(([t,r,c])=>{const g=new THREE.Group();
+if(t[0]==='k'){g.add(new THREE.Mesh(new THREE.TorusGeometry(.14,.04,8,14),new THREE.MeshStandardMaterial({color:t==='k1'?0xb87333:0xd8d8e0,emissive:0x443300})));g.add(box(.05,.3,.04,t==='k1'?0xb87333:0xd8d8e0,0,-.25,0,0x443300));g.position.set(c*2,1,r*2)}
+else if(t==='h'){[[0,0],[.12,.05],[-.1,.08]].forEach(o=>{const s=new THREE.Mesh(new THREE.SphereGeometry(.12,8,6),new THREE.MeshStandardMaterial({color:0x2d7a2d,emissive:0x0f4a0f}));s.position.set(o[0],.15,o[1]);g.add(s)});g.position.set(c*2,.2,r*2)}
+else{g.add(box(.35,.18,.22,0x9a8a3a,0,0,0,0x3a3210));g.position.set(c*2,.3,r*2)}
+W.add(g);items.push({t,g,x:c*2,z:r*2,got:false})});
+ZS.forEach(p=>zs.push(mkZ(p[0],p[1])))}
+let AC;function snd(f,d,ty='square',v=.2,sl=1){if(!AC)return;const o=AC.createOscillator(),g=AC.createGain(),n=AC.currentTime;o.type=ty;o.frequency.setValueAtTime(f,n);o.frequency.exponentialRampToValueAtTime(Math.max(20,f*sl),n+d);g.gain.setValueAtTime(v,n);g.gain.exponentialRampToValueAtTime(.001,n+d);o.connect(g);g.connect(AC.destination);o.start();o.stop(n+d)}
+let drone;function startAudio(){try{if(!AC)AC=new (window.AudioContext||window.webkitAudioContext)();if(!drone){drone=AC.createOscillator();const g=AC.createGain();g.gain.value=.04;drone.frequency.value=48;drone.type='sine';drone.connect(g);g.connect(AC.destination);drone.start()}}catch(e){}}
+function say(t,ms=2600){$('msg').textContent=t;msgT=ms/1000}
+function go(id){document.querySelectorAll('.scr').forEach(s=>s.classList.toggle('on',s.id===id))}
+function toggleDif(){nm=!nm;$('dif').textContent='Difficulté : '+(nm?'Cauchemar':'Normal')}
+function lock(){try{const p=renderer.domElement.requestPointerLock();p&&p.catch&&p.catch(()=>{})}catch(e){}}
+function start(){startAudio();build();hp=100;ammo=8;res=16;herbs=1;keys={};reloading=false;px=16;pz=16;yaw=0;pitch=0;t0=performance.now();state='play';go('none');$('hud').classList.add('on');lock();say('Trouvez la clé de bronze.',3500)}
+function pause(){if(state!=='play')return;state='pause';if(document.pointerLockElement)document.exitPointerLock();go('pause')}
+function resume(){state='play';go('none');lock()}
+function toMenu(){state='menu';$('hud').classList.remove('on');go('menu')}
+document.addEventListener('pointerlockchange',()=>{locked=!!document.pointerLockElement;if(!locked&&state==='play')pause()});
+addEventListener('mousemove',e=>{if(state==='play'&&locked){yaw-=e.movementX*.0022;pitch=Math.max(-1.2,Math.min(1.2,pitch-e.movementY*.0022))}});
+addEventListener('mousedown',e=>{if(state==='play'){if(!locked)lock();shoot()}});
+addEventListener('keydown',e=>{const k=e.key.toLowerCase();K[k]=true;if(k===' ')e.preventDefault();if(state!=='play'){if(k==='escape'&&state==='pause')resume();return}
+if(k==='escape'||k==='p')pause();else if(k===' ')shoot();else if(k==='r')reload();else if(k==='e')interact();else if(k==='h')heal()});
+addEventListener('keyup',e=>K[e.key.toLowerCase()]=false);
+function reload(){if(reloading||ammo>=8||res<=0)return;reloading=true;say('Rechargement…',1100);snd(300,.1,'square',.15);setTimeout(()=>{if(state==='play'||state==='pause'){const n=Math.min(8-ammo,res);ammo+=n;res-=n;snd(500,.08,'square',.15)}reloading=false},1100)}
+function heal(){if(herbs<=0||hp>=100)return say(herbs<=0?'Plus d’herbes vertes.':'Vous êtes en pleine forme.');herbs--;hp=Math.min(100,hp+45);snd(500,.3,'triangle',.2,1.8);say('Vous utilisez une herbe verte.')}
+const rc=new THREE.Raycaster();
+function shoot(){if(reloading||kick>.05)return;if(ammo<=0){snd(900,.04,'square',.15);say('Chargeur vide. Appuyez sur R.');return}
+ammo--;kick=.14;flash.intensity=2.5;snd(220,.2,'sawtooth',.3,.2);
+rc.setFromCamera(new THREE.Vector2(0,0),cam);const dir=rc.ray.direction,h=Math.hypot(dir.x,dir.z)||1,wd=rayWall(px,pz,dir.x/h,dir.z/h,40);
+const ms=[];zs.forEach(z=>!z.dead&&ms.push(...z.g.children));const hit=rc.intersectObjects(ms,false)[0];
+if(hit&&hit.distance*h<wd){const z=hit.object.userData.z,hs=hit.object===z.head;z.hp-=hs?2:1;z.stun=.4;z.aggro=8;hitT=.15;snd(120,.15,'square',.2,.5);
+if(z.hp<=0){z.dead=true;snd(70,.6,'sawtooth',.2,.4);say(hs?'Tir à la tête !':'Un de moins.',1200)}}
+if(ammo===0&&res>0)setTimeout(reload,300)}
+function interact(){let best,bd=3.2;for(const k in doors){const [r,c]=k.split(',').map(Number),dx=c*2-px,dz=r*2-pz,d=Math.hypot(dx,dz),dot=(dx*-Math.sin(yaw)+dz*-Math.cos(yaw))/(d||1);if(d<bd&&dot>.3){bd=d;best=[r,c,k]}}
+if(!best)return;const [r,c,k]=best,ch=M[r][c];
+if(ch==='L'&&!keys.k1){snd(160,.15);return say('Verrouillée. Il faut une clé de bronze.')}
+if(ch==='X'&&!keys.k2){snd(160,.15);return say('Verrouillée. Une clé en forme de cygne…')}
+M[r][c]='.';W.remove(doors[k]);delete doors[k];snd(140,.4,'sawtooth',.15,.6);say(ch==='D'?'La porte grince.':'Déverrouillée.')}
+function obj(){return keys.k2?'Montez rejoindre l’hélicoptère, au nord-est.':keys.k1?'Ouvrez la porte de bronze, au sud-est, et trouvez la clé du cygne.':'Trouvez la clé de bronze.'}
+function hud(){const s=hp>65?['Bon état','#7fa05a']:hp>30?['Attention','#d1a23a']:['Danger','#c9302a'];
+const inv=(keys.k1?'<span>Clé de bronze</span>':'')+(keys.k2?'<span>Clé du cygne</span>':'')+(herbs?`<span>Herbe verte ×${herbs} (H)</span>`:'');
+const h=`${hp}|${ammo}|${res}|${reloading}|${inv}|${obj()}`;if(h===lastHud)return;lastHud=h;
+$('hpb').style.width=hp+'%';$('hpb').style.background=s[1];$('hpst').textContent=s[0];$('hpst').style.color=s[1];
+$('ammo').innerHTML=`<b>${ammo}</b> / ${res}`+(reloading?'<small>Rechargement…</small>':'');$('inv').innerHTML=inv;$('obj').innerHTML='<i>Objectif</i>'+obj()}
+function die(){state='over';if(document.pointerLockElement)document.exitPointerLock();snd(80,1,'sawtooth',.3,.3);go('over')}
+function winG(){state='win';if(document.pointerLockElement)document.exitPointerLock();const s=Math.floor((performance.now()-t0)/1000);$('wt').textContent='Les rotors couvrent les cris du manoir. Temps : '+Math.floor(s/60)+' min '+String(s%60).padStart(2,'0')+' s.';snd(440,.6,'triangle',.25,2);go('win')}
+let last=performance.now();
+function loop(now){requestAnimationFrame(loop);const dt=Math.min(.05,(now-last)/1000);last=now;
+if(state==='play'){
+yaw+=((K.arrowleft?1:0)-(K.arrowright?1:0))*2.2*dt;
+const fx=-Math.sin(yaw),fz=-Math.cos(yaw),rx=Math.cos(yaw),rz=-Math.sin(yaw);let mx=0,mz=0;
+if(K.z||K.w||K.arrowup){mx+=fx;mz+=fz}if(K.s||K.arrowdown){mx-=fx;mz-=fz}if(K.d){mx+=rx;mz+=rz}if(K.q||K.a){mx-=rx;mz-=rz}
+const L=Math.hypot(mx,mz);if(L){const sp=3.3*dt/L;if(canGo(px+mx*sp,pz,.3))px+=mx*sp;if(canGo(px,pz+mz*sp,.3))pz+=mz*sp;bobT+=dt*9}
+cam.position.set(px,1.5+Math.sin(bobT)*.04,pz);cam.rotation.set(pitch,yaw,0,'YXZ');
+kick=Math.max(0,kick-dt);gun.position.z=-.55+kick*1.2;gun.rotation.x=kick*1.5;flash.intensity=Math.max(0,flash.intensity-dt*40);
+items.forEach(i=>{if(i.got)return;i.g.rotation.y+=dt*2;if(Math.hypot(i.x-px,i.z-pz)<1.1){i.got=true;W.remove(i.g);snd(660,.15,'triangle',.2,1.6);
+if(i.t==='k1'){keys.k1=1;say('Vous avez trouvé la clé de bronze.',3500)}else if(i.t==='k2'){keys.k2=1;say('Vous avez trouvé la clé du cygne.',3500)}
+else if(i.t==='h'){herbs++;say('Herbe verte récupérée.')}else{res+=8;say('Munitions +8')}}});
+zs.forEach(z=>{z.ph+=dt;const g=z.g;if(z.dead){z.fall=Math.min(1,z.fall+dt*2);g.rotation.x=-z.fall*Math.PI/2;g.position.y=z.fall*.18;return}
+const dx=px-z.x,dz=pz-z.z,d=Math.hypot(dx,dz);if(d<10&&rayWall(z.x,z.z,dx/d,dz/d,d)>=d-.2)z.aggro=6;z.aggro=Math.max(0,z.aggro-dt);z.stun-=dt;z.cd-=dt;
+g.rotation.z=Math.sin(z.ph*2)*.06;
+if(z.aggro>0&&z.stun<=0){g.rotation.y=Math.atan2(-dx,-dz);if(d>1.05){const sp=(nm?1.9:1.2)*dt;const ux=dx/d*sp,uz=dz/d*sp;if(canGo(z.x+ux,z.z,.3))z.x+=ux;if(canGo(z.x,z.z+uz,.3))z.z+=uz;g.position.y=Math.abs(Math.sin(z.ph*5))*.05}
+else if(z.cd<=0){z.cd=1.1;hp-=nm?22:13;vig=1;snd(120,.3,'square',.25,.5);if(hp<=0){hp=0;die()}}
+if(Math.random()<dt*.15)snd(90,.7,'sawtooth',Math.max(.02,.12-d*.01),.6)}
+else if(z.stun>0){z.x-=dx/d*dt*1.5*(canGo(z.x-dx/d*.1,z.z-dz/d*.1,.3)?1:0);z.z-=dz/d*dt*1.5*(canGo(z.x,z.z-dz/d*.1,.3)?1:0)}
+g.position.x=z.x;g.position.z=z.z});
+let np,nd=3.2;for(const k in doors){const [r,c]=k.split(',').map(Number),dx=c*2-px,dz=r*2-pz,d=Math.hypot(dx,dz);if(d<nd&&(dx*fx+dz*fz)/d>.3){nd=d;np=1}}
+if(np&&msgT<=0)$('msg').textContent='E : ouvrir la porte';else if(!np&&msgT<=0)$('msg').textContent='';
+msgT-=dt;
+if(Math.round(pz/2)<=4&&Math.round(px/2)>=13)winG();
+vig=Math.max(0,vig-dt*1.5);$('vig').style.opacity=Math.max(vig,hp<30?.35+Math.sin(now/200)*.15:0);hitT=Math.max(0,hitT-dt);$('hit').style.opacity=hitT*6;hud()}
+else if(state==='menu'){if(!M)build();px=16;pz=16;yaw+=dt*.12;cam.position.set(px,1.5,pz);cam.rotation.set(0,yaw,0)}
+fl&&fl.forEach(l=>l.intensity=l.userData.b*(Math.random()<.03?.3:1));
+renderer.render(scene,cam)}
+build();requestAnimationFrame(loop);
+</script>
+<script>
+/* ===== Extension : armes, inventaire, zombies animés, voix ===== */
+let wp='pistol',sh=0,has={sg:false},seen={},cool=0,parts=[],vOn=true,lh='',lt=performance.now(),ndt=.016;
+IT.push(['sg',12,10],['s',4,1],['s',8,6],['s',10,14]);ZS.push([6,13]);
+const pg=new THREE.SphereGeometry(.035,5,4),pmat=new THREE.MeshBasicMaterial({color:0x8a0f0a});
+const sgG=new THREE.Group();sgG.add(box(.07,.07,.9,0x2a2a2e,0,0,-.2),box(.09,.12,.35,0x5a3a20,0,-.06,.3));sgG.visible=false;cam.add(sgG);
+const knG=new THREE.Group();knG.add(box(.025,.05,.38,0xc8c8d0,0,0,-.25),box(.04,.05,.14,0x2a1a10,0,0,.02));knG.visible=false;cam.add(knG);
+const wbEl=document.createElement('div');wbEl.id='wb';$('hud').append(wbEl);
+const mm=document.createElement('canvas');mm.width=136;mm.height=112;mm.style.cssText='position:absolute;right:14px;top:calc(14px + env(safe-area-inset-top,0px));opacity:.85;background:rgba(12,10,8,.6);border:1px solid #4a3d2a';$('hud').append(mm);
+document.querySelectorAll('.keys').forEach(k=>k.insertAdjacentHTML('beforeend','<b>Tab</b><span>Inventaire</span><b>1 2 3 / molette</b><span>Changer d’arme</span>'));
+const vb=document.createElement('button');vb.textContent='Voix : activées';vb.onclick=()=>{vOn=!vOn;vb.textContent='Voix : '+(vOn?'activées':'coupées');if(vOn)voice('Voix activées.');else try{speechSynthesis.cancel()}catch(e){}};$('dif').after(vb);
+function voice(t,p=1.15,r=1,pr=0){if(pr)say('« '+t+' »',3000);if(!vOn||!window.speechSynthesis)return;try{const ss=speechSynthesis;if(ss.speaking&&!pr)return;if(pr)ss.cancel();const u=new SpeechSynthesisUtterance(t);u.lang='fr-FR';u.pitch=p;u.rate=r;const v=ss.getVoices().find(v=>v.lang&&v.lang.startsWith('fr'));if(v)u.voice=v;ss.speak(u)}catch(e){}}
+function showWeapon(){gun.visible=wp==='pistol';sgG.visible=wp==='shotgun';knG.visible=wp==='knife'}
+function equip(w){if(w==='shotgun'&&!has.sg)return;wp=w;showWeapon();snd(400,.06,'square',.1);if($('invs').classList.contains('on'))renderInv()}
+function cycle(d){const l=['pistol',...(has.sg?['shotgun']:[]),'knife'];equip(l[(l.indexOf(wp)+d+l.length)%l.length])}
+function splat(p,n=5){for(let i=0;i<n;i++){const m=new THREE.Mesh(pg,pmat);m.position.copy(p);scene.add(m);parts.push({m,v:new THREE.Vector3((Math.random()-.5)*2.5,Math.random()*2,(Math.random()-.5)*2.5),t:.7+Math.random()*.4})}}
+function hurtZ(z,d,hs,pt){z.hp-=d;z.stun=.4;z.aggro=8;hitT=.15;splat(pt,hs?8:4);snd(120,.15,'square',.2,.5);const t=z.g.children[0].material.emissive;t.setHex(0x990000);setTimeout(()=>t.setHex(0),90);
+if(z.hp<=0&&!z.dead){z.dead=true;snd(70,.7,'sawtooth',.25,.4);splat(pt,12);say(hs?'Tir à la tête !':'Un de moins.',1200)}}
+function fire(sp,range,dmg){rc.setFromCamera(new THREE.Vector2((Math.random()-.5)*sp,(Math.random()-.5)*sp),cam);const d=rc.ray.direction,h=Math.hypot(d.x,d.z)||1,wd=rayWall(px,pz,d.x/h,d.z/h,range);const ms=[];zs.forEach(z=>!z.dead&&ms.push(...z.g.children));const hit=rc.intersectObjects(ms,false)[0];if(!hit||hit.distance*h>=wd)return;const z=hit.object.userData.z,hs=hit.object===z.head;hurtZ(z,dmg*(hs?2:1),hs,hit.point)}
+shoot=function(){if(state!=='play'||cool>0||reloading)return;
+if(wp==='knife'){cool=.55;kick=.25;snd(500,.12,'sawtooth',.12,.3);let b,bd=2.1;zs.forEach(z=>{if(z.dead)return;const dx=z.x-px,dz=z.z-pz,d=Math.hypot(dx,dz);if(d<bd&&(dx*-Math.sin(yaw)+dz*-Math.cos(yaw))/d>.5){bd=d;b=z}});if(b)hurtZ(b,2,false,new THREE.Vector3(b.x,1.2,b.z));return}
+if(wp==='shotgun'){if(sh<=0){snd(900,.04,'square',.15);say('Plus de cartouches.');return}sh--;cool=.95;kick=.2;flash.intensity=3.5;snd(120,.35,'sawtooth',.4,.15);for(let i=0;i<7;i++)fire(.22,12,1);setTimeout(()=>snd(300,.12,'square',.12,.5),500);return}
+if(ammo<=0){snd(900,.04,'square',.15);if(res>0)reload();else voice('Plus de balles !',1.15,1.1,1);return}
+ammo--;cool=.18;kick=.14;flash.intensity=2.5;snd(220,.2,'sawtooth',.3,.2);fire(0,40,1);if(ammo===0&&res>0)setTimeout(reload,300)};
+const oR=reload;reload=function(){if(wp==='pistol')oR()};
+const oM=mkZ;mkZ=function(r,c){const z=oM(r,c),k=z.g.children;z.g.rotation.order='YXZ';z.lg=[k[1],k[2]];z.am=[k[4],k[5]];z.aa=-.5;return z};
+const oW=winG;winG=function(){oW();voice('Le toit… on a réussi !',1.15,1,1)};
+const oD=die;die=function(){oD();voice('Non… pas déjà…',1.1,.8,1)};
+const oS=start;start=function(){oS();wp='pistol';sh=0;has={sg:false};cool=0;lh='';parts.forEach(p=>scene.remove(p.m));parts=[];seen={h:herbs};showWeapon();
+items.forEach(i=>{if(i.t==='sg'||i.t==='s'){i.rx=i.x;i.rz=i.z;i.x=1e6;i.g.clear();if(i.t==='sg'){i.g.add(box(.08,.08,.9,0x2a2a2e,0,0,0),box(.1,.12,.35,0x5a3a20,0,-.03,.5));i.g.position.y=.6}else i.g.add(box(.3,.16,.2,0xa02020,0,0,0,0x300808),box(.3,.05,.2,0xb3924d,0,-.08,0))}});
+const b=zs[zs.length-1];b.g.scale.setScalar(1.35);b.hp=9;b.g.children[0].material.color.setHex(0x6a4234);
+voice('Où sont les autres ? Il faut que je sorte d’ici.',1.15,1,1)};
+function renderInv(){const S=[['Pistolet',`${ammo} / ${res} balles`,wp==='pistol',"equip('pistol')"]];
+if(has.sg)S.push(['Fusil à pompe',`${sh} cartouches`,wp==='shotgun',"equip('shotgun')"]);
+S.push(['Couteau','Corps à corps',wp==='knife',"equip('knife')"]);
+if(herbs)S.push([`Herbe verte ×${herbs}`,'Soigne 45 pv',0,'useHerb()']);
+if(keys.k1)S.push(['Clé de bronze','Examiner',0,"inspect('k1')"]);
+if(keys.k2)S.push(['Clé du cygne','Examiner',0,"inspect('k2')"]);
+$('grid').innerHTML=S.map(s=>`<button class="slot${s[2]?' on':''}" onclick="${s[3]}">${s[0]}<small>${s[2]?'Équipé · ':''}${s[1]}</small></button>`).join('')}
+function useHerb(){heal();$('note').textContent=$('msg').textContent+' Santé : '+hp+' / 100.';renderInv()}
+function inspect(k){const t=k==='k1'?'Une clé de bronze usée. La porte verrouillée au sud-est l’attend.':'Une clé ornée d’un cygne. Elle ouvre l’accès au toit.';$('note').textContent=t;voice(t,1.1,1,1)}
+function openInv(){if(state!=='play')return;state='inv';if(document.pointerLockElement)document.exitPointerLock();renderInv();$('note').textContent='Santé : '+hp+' / 100';go('invs')}
+function closeInv(){if(state!=='inv')return;state='play';go('none');lock()}
+addEventListener('keydown',e=>{const k=e.key.toLowerCase();if(k==='tab'){e.preventDefault();state==='play'?openInv():closeInv();return}
+if(state==='inv'&&k==='escape'){closeInv();return}if(state!=='play')return;
+if(e.code==='Digit1'||e.code==='Numpad1')equip('pistol');else if(e.code==='Digit2'||e.code==='Numpad2')equip('shotgun');else if(e.code==='Digit3'||e.code==='Numpad3')equip('knife')});
+addEventListener('wheel',e=>{if(state==='play')cycle(e.deltaY>0?1:-1)});
+hud=function(){const s=hp>65?['Bon état','#7fa05a']:hp>30?['Attention','#d1a23a']:['Danger','#c9302a'];
+const inv=(keys.k1?'<span>Clé de bronze</span>':'')+(keys.k2?'<span>Clé du cygne</span>':'')+(herbs?`<span>Herbe verte ×${herbs} (H)</span>`:'');
+const am=wp==='pistol'?`<b>${ammo}</b> / ${res}`+(reloading?'<small>Rechargement…</small>':''):wp==='shotgun'?`<b>${sh}</b> cartouches`:'<b>∞</b> couteau';
+const wb=[['pistol','1 Pistolet'],['shotgun','2 Fusil'],['knife','3 Couteau']].filter(w=>w[0]!=='shotgun'||has.sg).map(w=>`<span class="${wp===w[0]?'on':''}">${w[1]}</span>`).join('');
+const h=hp+am+inv+wb+obj();if(h===lh)return;lh=h;$('hpb').style.width=hp+'%';$('hpb').style.background=s[1];$('hpst').textContent=s[0];$('hpst').style.color=s[1];$('ammo').innerHTML=am;$('inv').innerHTML=inv;wbEl.innerHTML=wb;$('obj').innerHTML='<i>Objectif</i>'+obj()};
+function pre(){cool-=ndt;items.forEach(i=>{if(i.got||i.rx===undefined)return;i.g.rotation.y+=ndt*2;if(Math.hypot(i.rx-px,i.rz-pz)<1.1){i.got=true;W.remove(i.g);snd(660,.15,'triangle',.2,1.6);
+if(i.t==='sg'){has.sg=true;sh+=4;wp='shotgun';showWeapon();voice('Un fusil à pompe ! Enfin du sérieux.',1.1,1,1)}else{sh+=4;say('Cartouches +4')}}})}
+function drawMM(){const g=mm.getContext('2d');g.clearRect(0,0,136,112);M.forEach((r,y)=>r.forEach((ch,x)=>{if(ch!=='.'){g.fillStyle=ch==='#'?'#3a2e22':ch==='X'?'#a3201a':'#b3924d';g.fillRect(x*8,y*8,8,8)}}));zs.forEach(z=>{if(!z.dead&&z.aggro>0){g.fillStyle='#e33';g.fillRect(z.x*4-1,z.z*4-1,3,3)}});g.fillStyle='#7fa05a';g.save();g.translate(px*4,pz*4);g.rotate(-yaw);g.beginPath();g.moveTo(0,-5);g.lineTo(3,3);g.lineTo(-3,3);g.fill();g.restore()}
+function post(){const pl=state==='play';
+if(pl||state==='menu')zs.forEach(z=>{if(z.dead)return;const sp=z.px===undefined?0:Math.hypot(z.x-z.px,z.z-z.pz)/Math.max(ndt,.001);z.px=z.x;z.pz=z.z;const m=Math.min(1,sp),a=z.aggro>0;
+z.w=(z.w||z.ph)+ndt*(3+sp*4);z.aa+=((a?-1.4:-.5)-z.aa)*Math.min(1,ndt*5);const sw=Math.max(0,(z.cd-.7)/.4),s=Math.sin(z.w);
+z.lg[0].rotation.x=s*.7*m;z.lg[1].rotation.x=-s*.7*m;z.am[0].rotation.x=z.aa-sw*.8+s*.1;z.am[1].rotation.x=z.aa-sw*.8-s*.1;z.am[0].rotation.z=z.am[1].rotation.z=0;
+z.head.rotation.z=Math.sin(z.w*.5)*.2;z.head.position.z=-.05;z.g.rotation.x=z.stun>0?.45:-.06-.1*m-sw*.3;
+if(pl){if(a&&!z.was){snd(70,.9,'sawtooth',.2,.5);if(!seen.z){seen.z=1;voice('Ils sont là… ne bouge plus !',1.15,1.05,1)}else if(Math.random()<.3)voice('Hhhaaaaarrr',.05,.4)}z.was=a}});
+parts=parts.filter(p=>{p.t-=ndt;if(p.m.position.y>.03){p.v.y-=9*ndt;p.m.position.addScaledVector(p.v,ndt)}if(p.t<=0){scene.remove(p.m);return false}return true});
+sgG.position.copy(gun.position);sgG.rotation.copy(gun.rotation);knG.position.copy(gun.position);knG.rotation.set(gun.rotation.x-.2,-kick*2,-.5);
+if(pl){drawMM();if(keys.k1&&!seen.k1){seen.k1=1;voice('Une clé de bronze. Elle doit ouvrir la porte, au sud.',1.1,1,1)}if(keys.k2&&!seen.k2){seen.k2=1;voice('La clé du cygne. L’hélicoptère n’est plus loin.',1.1,1,1)}
+if(herbs>seen.h)voice('Une herbe verte. Ça peut servir.',1.1,1,1);seen.h=herbs;
+if(hp<30&&!seen.low){seen.low=1;voice('Je tiens à peine…',1.1,.85,1)}if(hp>=50)seen.low=0}}
+const oL=loop;loop=function(now){ndt=Math.min(.05,(performance.now()-lt)/1000);lt=performance.now();if(state==='play')pre();oL(now);post()};
+</script></body></html>
